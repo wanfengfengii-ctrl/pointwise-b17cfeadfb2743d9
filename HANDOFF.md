@@ -10,7 +10,36 @@
 
 `reports.retrieve.get_handoff(reports, report_id) -> bytes | None` 按号领取固定的 UTF-8 JSON 交班正文。先前只签普通报告的号码及有效未知号码返回 `None`，号码格式沿用 `get_report`。领件只读已签存值，勘误及重开后同号正文保持一致。
 
-交班正文的公开字段为 `version`（整数 `2`）、`report_id`、`batch`、`anchor_station`、`probes`、`distances`、`parents`、`receipt`、`evidence`。`probes` 为两个 `[站名, 探针名]`，`distances` 为精确有理字符串的数组。`parents` 按请求实收序排列，每对象使用 `ParentEvidence` 的字段名。`receipt` 使用 `FirstReceipt` 的字段名，`signed_at` 是 ISO 8601 UTC 时间字符串。`evidence` 的编码由实现决定，并在交付说明中记录。其内容须能确定全部带距离的完整许可摆放，朗读同一份正文时所用的父件局部坐标与签发时相同。
+交班正文的公开字段为 `version`（整数 `2`）、`report_id`、`batch`、`anchor_station`、`probes`、`distances`、`parents`、`receipt`、`evidence`。`probes` 为两个 `[站名, 探针名]`，`distances` 为精确有理字符串的数组。`parents` 按请求实收序排列，每对象使用 `ParentEvidence` 的字段名。`receipt` 使用 `FirstReceipt` 的字段名，`signed_at` 是 ISO 8601 UTC 时间字符串。
+
+### evidence 编码（本实现的交付约定）
+
+`evidence` 与 `distances` 一一对应，是三层数组：
+
+1. 外层按 `distances` 的升序排列，每个距离一项；
+2. 第二层列出实现该距离的**全部完整许可摆放**，每项是一次整组摆放；
+3. 第三层按该件 `parents` 的顺序给出每个实收件的一个变换对象。
+
+变换对象字段为 `cosine`、`sine`、`tx`、`ty`、`reflected`，前四个是精确有理字符串，`reflected` 为布尔值，作用顺序与 `review.rigid.RigidPlacement` 一致。起算站在每个整组摆放里都是零平移、`(cosine, sine) = ("1", "0")`，其 `reflected` 保留该分支实际面向。因此仅凭交班正文（配合各父件随 V1 站件携带、在签发时相同的局部坐标）即可重放全部带距离的完整摆放；旋转系数必须满足 `cosine² + sine² = 1`，否则正文判为不自洽。正文以 `json.dumps(..., sort_keys=True, separators=(',', ':'))` 编码为 UTF-8 字节，相同输入除报告号与签发时间外字节确定。
+
+## 调用速览
+
+```python
+from review.request import ReviewRequest, sign_handoff
+from review.handoff import combine_handoffs
+from reports.retrieve import get_handoff
+
+request = ReviewRequest((admission_a, admission_b), 'A', (('A', 'D'), ('B', 'F')))
+stored = sign_handoff(inbox, reports, request, signed_by='Relief lead')
+document = get_handoff(reports, stored.report_id)   # 固定的 UTF-8 交班正文字节
+# 断库、重开后仍可按号领取同一份正文：
+same_bytes = get_handoff(reopened_reports, stored.report_id)
+
+common = combine_handoffs([(document_one, '0'), (document_two, '4')])
+# common 为 None 表示无共同摆放或选定距离缺席；结构非法抛 ValueError
+```
+
+`sign_handoff` 与 `sign_review` 共用报告号序列和同一套 `ReviewRequest` 校验。`get_handoff` 对普通 V1 报告号及有效未知号返回 `None`，号码格式非法抛 `ValueError`。`combine_handoffs` 的距离接受 `int`、`Fraction` 或 `parse_rational` 可读的精确字符串，负数与浮点等非法输入抛 `ValueError`。
 
 ## 离线核定
 

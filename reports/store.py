@@ -59,6 +59,12 @@ class ReportStore:
                 signed_at TEXT NOT NULL
             )
         ''')
+        self.connection.execute('''
+            CREATE TABLE IF NOT EXISTS handoff_packets (
+                report_id INTEGER PRIMARY KEY REFERENCES reports(report_id),
+                document BLOB NOT NULL
+            )
+        ''')
 
     def commit_report(
         self, *, batch: str, anchor_station: str, probes: tuple[tuple[str, str], tuple[str, str]],
@@ -88,6 +94,46 @@ class ReportStore:
                 INSERT INTO report_receipts (report_id, signed_by, signed_at) VALUES (?, ?, ?)
             ''', (report_id, receipt.signed_by, receipt.signed_at.isoformat()))
         return StoredReport(report_id, batch, anchor_station, probes, distances, parents, receipt)
+
+    def commit_handoff(
+        self, *, batch: str, anchor_station: str, probes: tuple[tuple[str, str], tuple[str, str]],
+        distances: tuple[Fraction, ...], parents: tuple[ParentEvidence, ...],
+        signed_by: str, signed_at: datetime | None,
+        encode_document,
+    ) -> StoredReport:
+        encoded_probes = json.dumps(probes)
+        encoded_distances = json.dumps([str(distance) for distance in distances])
+        self.connection.execute('BEGIN IMMEDIATE')
+        with self.connection:
+            cursor = self.connection.execute('''
+                INSERT INTO reports (batch, anchor_station, probes, distances) VALUES (?, ?, ?, ?)
+            ''', (batch, anchor_station, encoded_probes, encoded_distances))
+            report_id = cursor.lastrowid
+            self.connection.executemany('''
+                INSERT INTO report_parents
+                    (report_id, ordinal, admission_id, batch, station, revision, issue_id,
+                     received_from, packet_sha256)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                (report_id, ordinal, parent.admission_id, parent.batch, parent.station,
+                 parent.revision, parent.issue_id, parent.received_from, parent.packet_sha256)
+                for ordinal, parent in enumerate(parents)
+            ))
+            receipt = make_first_receipt(report_id, signed_by, signed_at)
+            self.connection.execute('''
+                INSERT INTO report_receipts (report_id, signed_by, signed_at) VALUES (?, ?, ?)
+            ''', (report_id, receipt.signed_by, receipt.signed_at.isoformat()))
+            document = encode_document(report_id, receipt)
+            self.connection.execute('''
+                INSERT INTO handoff_packets (report_id, document) VALUES (?, ?)
+            ''', (report_id, document))
+        return StoredReport(report_id, batch, anchor_station, probes, distances, parents, receipt)
+
+    def read_handoff(self, report_id: int) -> bytes | None:
+        row = self.connection.execute('''
+            SELECT document FROM handoff_packets WHERE report_id = ?
+        ''', (report_id,)).fetchone()
+        return None if row is None else row[0]
 
     def read_report(self, report_id: int) -> StoredReport | None:
         if type(report_id) is not int or not 0 < report_id < 2**63:

@@ -33,6 +33,15 @@ V1 是 UTF-8 JSON。外层包含 `version`、`identity` 和 `body`。正文包�
 - `review.request.sign_review(inbox, reports, request, signed_by=..., signed_at=...)` 返回定稿。`signed_at` 可省略以使用当前 UTC 时间，也可传入带时区的 `datetime`。起算站固定平移、旋转基准，保留许可的面向。每站最终摆放须满足自身扫描面许可及其参与的全部接缝。结构合法但点间长度、其余共有点或闭合接缝无法相容时，正常签空集。`distances` 是数值升序去重的 `Fraction` 元组，单位 `mm²`。两探针合法重合时含 `Fraction(0)`。报告、按请求排序的父件和首执同时提交，SQLite 写入错误会回滚并传播给调用方。
 - `reports.retrieve.get_report(reports, report_id)` 按号读取已存距离、原探针请求、有序父件及首次签发人和时间。父件包含接纳号、站别、批次、修订、发行号、首次实收来源及字节摘要。有效号码未找到时返回 `None`。复领不用站库或重新核定。再次调用签发入口会产生独立定稿。
 
+## 交班签发、领件与离线合查
+
+接班质控员用同一套 `ReviewRequest` 把已签任务整理为 V2 交班件，再在断库后离线判断多份任务能否共用一次装夹。实现与回归分别在 `review/request.py`、`review/handoff.py`、`reports/publish.py` 和 `tests/test_handoff.py`。
+
+- `review.request.sign_handoff(inbox, reports, request, *, signed_by, signed_at=None) -> StoredReport` 沿用单报告请求与 V1 核定口径，与普通报告共用报告号。它把每个精确平方距离与实现它的全部整组摆放一起冻结。结构合法但无许可摆放时也签发，距离与摆放均为空。报告、有序父件、首执和交班正文在同一事务提交，写入失败整笔回滚、不留新增且可重试。非法请求抛 `ValueError`，未知实收号抛 `LookupError`。
+- `reports.retrieve.get_handoff(reports, report_id) -> bytes | None` 按号领取固定 UTF-8 JSON 交班正文。普通 V1 报告号和有效未知号返回 `None`，号码格式非法抛 `ValueError`。领件只读已签存值，勘误及重开后同号正文保持一致。
+- `review.handoff.combine_handoffs(selections)` 离线合查，`selections` 为至少两项的有序 `(交班正文字节, 非负有理平方距离)`。仅以同一中心、同批且经共用实收件连通的交班件挂接；同名站对应不同实收号、同一实收号出处不一致、混批或未连通均抛 `ValueError`，坏格式、正文不自洽和 V1 输入同样抛 `ValueError`。可行时按输入项及各件 `parents` 序返回一组 `RigidPlacement`，首件起算站为零平移、`(1, 0)` 旋转；无共同摆放或选定距离缺席返回 `None`。
+- 交班正文 `version` 为 `2`，`evidence` 按距离分组保存全部整组摆放，每个变换给出 `cosine`、`sine`、`tx`、`ty`、`reflected` 精确值。字段、编码与样例见 `HANDOFF.md`。
+
 ## 正常回归
 
-完整套件位于 `tests`。发行测试覆盖勘误后仍可按旧号发行、定向关系和输入拒绝。实收测试覆盖独立站件、身份不符和重复实收。复测测试覆盖闭环、只有两条接缝的连通链、扫描面、零距、有理旋转和混批拒绝。报告测试用真实 SQLite 触发器在首执写入点检验回滚，再重试和重开复领，核对父件次序、定稿、首执和当前修订。
+完整套件位于 `tests`。发行测试覆盖勘误后仍可按旧号发行、定向关系和输入拒绝。实收测试覆盖独立站件、身份不符和重复实收。复测测试覆盖闭环、只有两条接缝的连通链、扫描面、零距、有理旋转和混批拒绝。报告测试用真实 SQLite 触发器在首执写入点检验回滚，再重试和重开复领，核对父件次序、定稿、首执和当前修订。交班测试（`tests/test_handoff.py`）覆盖交班签发与空摆放、首执/正文写入失败回滚重试、重开按号领件、`faces` 与 `cycle` 离线合查、距离缺席返回 `None`、V1 与坏正文/混批/同名异号/未连通的 `ValueError`，以及刚体合成与求逆的精确代数。

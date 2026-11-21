@@ -27,6 +27,45 @@ class RigidPlacement:
         )
 
 
+def _linear_matrix(placement: RigidPlacement) -> tuple[tuple[Fraction, Fraction], tuple[Fraction, Fraction]]:
+    """Return the [[c, -e s], [s, e c]] linear part of a placement."""
+    c, s = placement.cosine, placement.sine
+    e = placement.orientation
+    return ((c, -e * s), (s, e * c))
+
+
+def compose(first: RigidPlacement, second: RigidPlacement) -> RigidPlacement:
+    """Return the placement that applies ``first`` and then ``second``."""
+    (a11, a12), (a21, a22) = _linear_matrix(first)
+    (b11, b12), (b21, b22) = _linear_matrix(second)
+    cosine = b11 * a11 + b12 * a21
+    sine = b21 * a11 + b22 * a21
+    tx, ty = first.translation
+    translation = (
+        b11 * tx + b12 * ty + second.translation[0],
+        b21 * tx + b22 * ty + second.translation[1],
+    )
+    return RigidPlacement(cosine, sine, translation, first.reflected != second.reflected)
+
+
+def inverse(placement: RigidPlacement) -> RigidPlacement:
+    """Return the inverse rigid placement, including the face reflection.
+
+    The linear part is orthogonal, so its inverse is its transpose. Writing
+    that transpose back into the dataclass convention keeps ``sine`` as the
+    lower-left matrix entry; the inverse translation is ``-R^T t``.
+    """
+    (r11, r12), (r21, r22) = _linear_matrix(placement)
+    tx, ty = placement.translation
+    inverse_cosine = r11
+    inverse_sine = r12 if placement.reflected else -r21
+    translation = (
+        -(r11 * tx + r21 * ty),
+        -(r12 * tx + r22 * ty),
+    )
+    return RigidPlacement(inverse_cosine, inverse_sine, translation, placement.reflected)
+
+
 def align_pair(
     source_start: Point, source_end: Point, target_start: Point, target_end: Point
 ) -> tuple[RigidPlacement, ...]:
