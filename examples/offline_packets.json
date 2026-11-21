@@ -1,0 +1,6 @@
+{
+  "A": {"version":1,"identity":{"batch":"J17","station":"A","revision":31,"issue_id":41},"body":{"identity":{"batch":"J17","station":"A","revision":31,"issue_id":41},"allow_flip":false,"markers":{"O":["0","0"],"E":["1","0"],"P":["0","1"],"R":["1","1"]},"probes":{"D":["3","2"]}}},
+  "B": {"version":1,"identity":{"batch":"J17","station":"B","revision":32,"issue_id":42},"body":{"identity":{"batch":"J17","station":"B","revision":32,"issue_id":42},"allow_flip":true,"markers":{"O":["0","0"],"E":["1","0"],"P":["0","1"],"Q":["2","1"]},"probes":{}}},
+  "C_original": {"version":1,"identity":{"batch":"J17","station":"C","revision":33,"issue_id":43},"body":{"identity":{"batch":"J17","station":"C","revision":33,"issue_id":43},"allow_flip":true,"markers":{"O":["0","0"],"E":["1","0"],"Q":["2","1"],"R":["1","-1"]},"probes":{"F":["3","3"]}}},
+  "C_corrected": {"version":1,"identity":{"batch":"J17","station":"C","revision":34,"issue_id":44},"body":{"identity":{"batch":"J17","station":"C","revision":34,"issue_id":44},"allow_flip":true,"markers":{"O":["0","0"],"E":["1","0"],"Q":["2","1"],"R":["1","1"]},"probes":{"F":["3","3"]}}}
+}

@@ -1,0 +1,27 @@
+{
+  "faces": {
+    "scans": {
+      "A": {"batch":"J18","station":"A","source":"bench/A","face":"fixed","markers":[["O",[0,0]],["E",[1,0]]],"probes":[["D",[0,1]],["H",[0,0]]]},
+      "B": {"batch":"J18","station":"B","source":"bench/B","face":"reversible","markers":[["O",[0,0]],["E",["3/5","4/5"]]],"probes":[["F",["-4/5","3/5"]],["G",["4/5","-3/5"]],["J",[0,0]]]},
+      "B_corrected": {"batch":"J18","station":"B","source":"bench/B-correction","face":"reversible","markers":[["O",[0,0]],["E",["3/5","4/5"]]],"probes":[["F",["-8/5","6/5"]],["G",["4/5","-3/5"]],["J",[0,0]]]}
+    },
+    "requests": {
+      "first": {"parents":["A","B"],"anchor":"A","probes":[["A","D"],["B","F"]],"distances":["0","4"]},
+      "second": {"parents":["B","A"],"anchor":"B","probes":[["A","D"],["B","G"]],"distances":["0","4"]},
+      "axis": {"parents":["A","B"],"anchor":"B","probes":[["A","H"],["B","J"]],"distances":["0"]},
+      "corrected": {"parents":["A","B_corrected"],"anchor":"A","probes":[["A","D"],["B","F"]],"distances":["1","9"]}
+    }
+  },
+  "cycle": {
+    "scans": {
+      "A": {"batch":"J19","station":"A","source":"bench/A","face":"fixed","markers":[["AB_O",[0,0]],["AB_E",[1,0]],["CA_O",[0,2]],["CA_E",[1,2]]],"probes":[["P_AB",[0,0]],["P_CA",[0,2]]]},
+      "B": {"batch":"J19","station":"B","source":"bench/B","face":"fixed","markers":[["AB_O",[0,0]],["AB_E",[1,0]],["BC_O",[0,1]],["BC_E",[1,1]]],"probes":[["P_AB",[0,0]],["P_BC",[0,1]]]},
+      "C": {"batch":"J19","station":"C","source":"bench/C","face":"fixed","markers":[["BC_O",[0,1]],["BC_E",[1,1]],["CA_O",[-1,2]],["CA_E",[0,2]]],"probes":[["P_BC",[0,1]],["P_CA",[-1,2]]]}
+    },
+    "requests": {
+      "ab": {"parents":["A","B"],"anchor":"A","probes":[["A","P_AB"],["B","P_AB"]],"distances":["0"]},
+      "bc": {"parents":["B","C"],"anchor":"B","probes":[["B","P_BC"],["C","P_BC"]],"distances":["0"]},
+      "ca": {"parents":["C","A"],"anchor":"C","probes":[["C","P_CA"],["A","P_CA"]],"distances":["0"]}
+    }
+  }
+}

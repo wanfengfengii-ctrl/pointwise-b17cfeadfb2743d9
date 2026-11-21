@@ -1,0 +1,6 @@
+{
+  "A": {"batch":"J17","station":"A","source":"day/A/initial","face":"fixed","markers":[["O",[0,0]],["E",[1,0]],["P",[0,1]],["R",[1,1]]],"probes":[["D",[3,2]]]},
+  "B": {"batch":"J17","station":"B","source":"day/B/initial","face":"reversible","markers":[["O",[0,0]],["E",[1,0]],["P",[0,1]],["Q",[2,1]]],"probes":[]},
+  "C_original": {"batch":"J17","station":"C","source":"day/C/initial","face":"reversible","markers":[["O",[0,0]],["E",[1,0]],["Q",[2,1]],["R",[1,-1]]],"probes":[["F",[3,3]]]},
+  "C_corrected": {"batch":"J17","station":"C","source":"day/C/correction","face":"reversible","markers":[["O",[0,0]],["E",[1,0]],["Q",[2,1]],["R",[1,1]]],"probes":[["F",[3,3]]]}
+}
